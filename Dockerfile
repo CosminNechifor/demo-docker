@@ -1,21 +1,32 @@
-FROM node:14
+FROM node:12.19.0-alpine3.9 AS development
 
-# Create app directory
 WORKDIR /usr/src/app
 
-# Install app dependencies
-# A wildcard is used to ensure both package.json AND package-lock.json are copied
-# where available (npm@5+)
 COPY package*.json ./
 
-RUN npm install
+RUN npm install glob rimraf
+
+RUN npm install --only=development
 
 COPY . .
 
+RUN npm run build
+
+FROM node:12.19.0-alpine3.9 as production
+
+ARG NODE_ENV=production
+ENV NODE_ENV=${NODE_ENV}
+
+WORKDIR /usr/src/app
+
+COPY package*.json ./
+
+RUN npm install --only=production
+
+COPY . .
+
+COPY --from=development /usr/src/app/dist ./dist
+
 EXPOSE 3000
 
-CMD [ "npm", "run", "start:dev" ]
-
-# To understand each command and what it does I recommend going
-# to the following website and read the command:
-# https://kapeli.com/cheat_sheets/Dockerfile.docset/Contents/Resources/Documents/index
+CMD ["node", "dist/main"]
